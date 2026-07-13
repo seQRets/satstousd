@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sats to USD Converter</title>
+<style>
+  :root {
+    --bg: #000000;
+    --field-bg: #111111;
+    --field-border: #262626;
+    --text: #ffffff;
+    --text-dim: #8a8a8a;
+    --accent: #f7931a;
+    --usd-green: #22c55e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 60px 20px;
+  }
+  .container {
+    width: 100%;
+    max-width: 580px;
+    text-align: center;
+  }
+  .logo {
+    width: 100px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+  }
+  .logo svg { width: 100px; height: 100px; }
+  h1 { font-size: 40px; font-weight: 800; letter-spacing: -0.5px; }
+  .subtitle { color: var(--text-dim); font-size: 18px; margin-top: 8px; margin-bottom: 40px; }
+
+  .field {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: var(--field-bg);
+    border: 1px solid var(--field-border);
+    border-radius: 16px;
+    padding: 22px 24px;
+    margin-bottom: 18px;
+  }
+  .field input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-size: 34px;
+    font-weight: 700;
+    width: 100%;
+  }
+  .field input::selection { background: #2b4a8b; }
+  .badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .badge .coin {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700;
+    color: #fff;
+  }
+  .coin.usd { background: var(--usd-green); }
+  .coin.btc { background: var(--accent); }
+  .coin-sats { background: transparent; }
+  .coin-sats svg { width: 30px; height: 30px; display: block; }
+
+  .info { color: var(--text-dim); font-size: 14px; line-height: 1.9; margin-top: 22px; }
+  .info a { color: var(--text); text-decoration: underline; cursor: pointer; }
+
+  .toggle {
+    display: inline-flex;
+    gap: 6px;
+    margin-top: 26px;
+    background: transparent;
+  }
+  .toggle button {
+    border: none;
+    border-radius: 999px;
+    padding: 10px 22px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    background: #1c1c1c;
+    color: var(--text);
+    transition: background .15s;
+  }
+  .toggle button.active { background: #ffffff; color: #000; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Satoshi (sat) symbol">
+        <defs>
+          <!-- Turbulence + displacement roughens the crisp edges into brush strokes -->
+          <filter id="brush" x="-20%" y="-20%" width="140%" height="140%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="6" result="noise"/>
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="4" xChannelSelector="R" yChannelSelector="G"/>
+          </filter>
+        </defs>
+        <g fill="var(--accent)" filter="url(#brush)">
+          <!-- top tick -->
+          <rect x="45.8" y="17" width="8.4" height="15" rx="4" transform="rotate(-7 50 24.5)"/>
+          <!-- three horizontal strokes -->
+          <rect x="23" y="37" width="54" height="8"   rx="4"/>
+          <rect x="20" y="45.7" width="60" height="8.6" rx="4.3"/>
+          <rect x="23" y="55" width="54" height="8"   rx="4"/>
+          <!-- bottom tick -->
+          <rect x="45.8" y="68" width="8.4" height="15" rx="4" transform="rotate(-7 50 75.5)"/>
+        </g>
+      </svg>
+    </div>
+    <h1>Sats to USD Converter</h1>
+    <p class="subtitle">Calculate satoshis to <span id="curLabel">USD</span> &amp; BTC</p>
+
+    <div class="field">
+      <input id="fiat" type="text" inputmode="decimal" value="63,049">
+      <span class="badge"><span class="coin usd" id="fiatCoin">$</span><span id="fiatCode">USD</span></span>
+    </div>
+
+    <div class="field">
+      <input id="btc" type="text" inputmode="decimal" value="1">
+      <span class="badge"><span class="coin btc">₿</span>BTC</span>
+    </div>
+
+    <div class="field">
+      <input id="sats" type="text" inputmode="numeric" value="100,000,000">
+      <span class="badge">
+        <span class="coin coin-sats">
+          <svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M80 40C80 45.2529 78.9654 50.4543 76.9552 55.3073C74.945 60.1604 71.9986 64.5699 68.2843 68.2843C64.5699 71.9986 60.1604 74.945 55.3073 76.9552C50.4543 78.9654 45.2529 80 40 80C34.7471 80 29.5457 78.9654 24.6927 76.9552C19.8396 74.945 15.4301 71.9986 11.7157 68.2843C8.00138 64.5699 5.05501 60.1604 3.04482 55.3073C1.03463 50.4543 -7.82739e-08 45.2529 0 40C1.58081e-07 29.3913 4.21427 19.2172 11.7157 11.7157C19.2172 4.21427 29.3913 0 40 0C50.6087 0 60.7828 4.21427 68.2843 11.7157C75.7857 19.2172 80 29.3913 80 40ZM25.3022 25.52L59.2444 34.6889L60.7422 28.1911L26.7956 19.0222L25.3022 25.52ZM49.8622 11.9644L48.0578 19.8489L41.6222 18.1067L43.4311 10.2222L49.8622 11.9644ZM36.5644 69.7778L38.3778 61.8933L31.9422 60.1556L30.1289 68.04L36.5644 69.7778ZM56.2133 47.8489L22.2711 38.6667L23.7644 32.1689L57.7067 41.3511L56.2133 47.8489ZM19.2533 51.8044L53.2 60.9778L54.6933 54.48L20.7467 45.3067L19.2533 51.8044Z" fill="#FF6106"/>
+          </svg>
+        </span>SATS
+      </span>
+    </div>
+
+    <div class="info">
+      <div id="athLine">All-time high: $126,080 on Oct 7, 2025 &nbsp;•&nbsp; Days since: 280</div>
+      <div id="priceLine">Current price: $63,049, or $0.00063049 per 1 sat. Last checked --:--:-- <a id="refresh">Refresh</a></div>
+    </div>
+
+    <div class="toggle" id="toggle">
+      <button data-cur="USD" class="active">USD</button>
+      <button data-cur="EUR">EUR</button>
+      <button data-cur="GBP">GBP</button>
+    </div>
+  </div>
+
+<script>
+const SATS_PER_BTC = 100_000_000;
+const symbols = { USD: '$', EUR: '€', GBP: '£' };
+const state = { currency: 'USD', price: 63049 }; // fiat price per 1 BTC
+
+const el = id => document.getElementById(id);
+const fiatEl = el('fiat'), btcEl = el('btc'), satsEl = el('sats');
+
+function fmt(n, maxDec) {
+  if (!isFinite(n)) return '0';
+  return n.toLocaleString('en-US', { maximumFractionDigits: maxDec });
+}
+const parse = s => parseFloat(String(s).replace(/,/g, '')) || 0;
+
+// Recalculate all fields from a satoshi amount, skipping the field being typed in
+function render(fromSats, skip) {
+  const btc = fromSats / SATS_PER_BTC;
+  const fiat = btc * state.price;
+  if (skip !== 'fiat') fiatEl.value = fmt(fiat, 2);
+  if (skip !== 'btc')  btcEl.value  = fmt(btc, 8);
+  if (skip !== 'sats') satsEl.value = fmt(fromSats, 0);
+  updateInfo();
+}
+
+function updateInfo() {
+  const sym = symbols[state.currency];
+  const perSat = state.price / SATS_PER_BTC;
+  const t = new Date().toLocaleTimeString('en-US');
+  el('priceLine').innerHTML = `Current price: ${sym}${fmt(state.price, 0)}, or ${sym}${perSat.toFixed(8)} per 1 sat. Last checked ${t} <a id="refresh">Refresh</a>`;
+  el('refresh').addEventListener('click', fetchPrice);
+}
+
+fiatEl.addEventListener('input', () => render(parse(fiatEl.value) / state.price * SATS_PER_BTC, 'fiat'));
+btcEl.addEventListener('input',  () => render(parse(btcEl.value) * SATS_PER_BTC, 'btc'));
+satsEl.addEventListener('input', () => render(parse(satsEl.value), 'sats'));
+
+// Currency toggle
+el('toggle').addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  [...el('toggle').children].forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  state.currency = btn.dataset.cur;
+  el('curLabel').textContent = state.currency;
+  el('fiatCode').textContent = state.currency;
+  el('fiatCoin').textContent = symbols[state.currency];
+  fetchPrice();
+});
+
+// Live price from the Coinbase public spot API (no API key required).
+// Endpoint: https://api.coinbase.com/v2/prices/BTC-<CUR>/spot
+async function fetchPrice() {
+  try {
+    const r = await fetch(`https://api.coinbase.com/v2/prices/BTC-${state.currency}/spot`);
+    const j = await r.json();
+    const p = parseFloat(j?.data?.amount);
+    if (p) state.price = p;
+  } catch (err) {
+    console.warn('Price fetch failed, using last known price', err);
+  }
+  render(parse(satsEl.value), null);
+}
+
+// Initialize
+render(SATS_PER_BTC, null);
+fetchPrice();
+
+// Auto-refresh the live price every 5 seconds
+const REFRESH_MS = 5_000;
+setInterval(fetchPrice, REFRESH_MS);
+</script>
+</body>
+</html>
