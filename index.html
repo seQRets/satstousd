@@ -171,7 +171,17 @@
 <script>
 const SATS_PER_BTC = 100_000_000;
 const symbols = { USD: '$', EUR: '€', GBP: '£' };
-const state = { currency: 'USD', price: 63049 }; // fiat price per 1 BTC
+const ATH_USD = 126080;          // all-time high, in USD
+const ATH_DATE = '2025-10-07';   // date of the all-time high
+const ATH_LABEL = 'Oct 7, 2025'; // display label for that date
+// usdRate = how much of the selected currency 1 USD buys (1 for USD)
+const state = { currency: 'USD', price: 63049, usdRate: 1 }; // fiat price per 1 BTC
+
+// Whole days between the ATH date and today, computed live
+function daysSince(iso) {
+  const then = new Date(iso + 'T00:00:00');
+  return Math.floor((Date.now() - then.getTime()) / 86_400_000);
+}
 
 const el = id => document.getElementById(id);
 const fiatEl = el('fiat'), btcEl = el('btc'), satsEl = el('sats');
@@ -196,6 +206,8 @@ function updateInfo() {
   const sym = symbols[state.currency];
   const perSat = state.price / SATS_PER_BTC;
   const t = new Date().toLocaleTimeString('en-US');
+  const athVal = ATH_USD * state.usdRate;
+  el('athLine').innerHTML = `All-time high: ${sym}${fmt(athVal, 0)} on ${ATH_LABEL} &nbsp;•&nbsp; Days since: ${daysSince(ATH_DATE)}`;
   el('priceLine').innerHTML = `Current price: ${sym}${fmt(state.price, 0)}, or ${sym}${perSat.toFixed(8)} per 1 sat. Last checked ${t} <a id="refresh">Refresh</a>`;
   el('refresh').addEventListener('click', fetchPrice);
 }
@@ -214,7 +226,7 @@ el('toggle').addEventListener('click', e => {
   el('curLabel').textContent = state.currency;
   el('fiatCode').textContent = state.currency;
   el('fiatCoin').textContent = symbols[state.currency];
-  fetchPrice();
+  fetchRate().then(fetchPrice);
 });
 
 // Live price from the Coinbase public spot API (no API key required).
@@ -231,9 +243,23 @@ async function fetchPrice() {
   render(parse(satsEl.value), null);
 }
 
+// Fiat FX (USD -> selected currency) used to convert the all-time high value.
+// Endpoint: https://api.coinbase.com/v2/exchange-rates?currency=USD
+async function fetchRate() {
+  if (state.currency === 'USD') { state.usdRate = 1; return; }
+  try {
+    const r = await fetch('https://api.coinbase.com/v2/exchange-rates?currency=USD');
+    const j = await r.json();
+    const rate = parseFloat(j?.data?.rates?.[state.currency]);
+    if (rate) state.usdRate = rate;
+  } catch (err) {
+    console.warn('FX rate fetch failed, ATH shown at last known rate', err);
+  }
+}
+
 // Initialize
 render(SATS_PER_BTC, null);
-fetchPrice();
+fetchRate().then(fetchPrice);
 
 // Auto-refresh the live price every 5 seconds
 const REFRESH_MS = 5_000;
