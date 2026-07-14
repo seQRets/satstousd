@@ -89,24 +89,25 @@
   .info { color: var(--text-dim); font-size: 14px; line-height: 1.9; margin-top: 22px; }
   .info a { color: var(--text); text-decoration: underline; cursor: pointer; }
 
-  .toggle {
-    display: inline-flex;
-    gap: 6px;
+  .currency-select {
     margin-top: 26px;
-    background: transparent;
-  }
-  .toggle button {
-    border: none;
+    appearance: none;
+    -webkit-appearance: none;
+    background: #1c1c1c url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%238a8a8a' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>") no-repeat right 16px center;
+    color: var(--text);
+    border: 1px solid var(--field-border);
     border-radius: 999px;
-    padding: 10px 22px;
+    padding: 11px 42px 11px 22px;
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
-    background: #1c1c1c;
-    color: var(--text);
-    transition: background .15s;
+    outline: none;
+    text-align: center;
+    text-align-last: center;
+    transition: background-color .15s;
   }
-  .toggle button.active { background: #ffffff; color: #000; }
+  .currency-select:hover { background-color: #262626; }
+  .currency-select option { background: #1c1c1c; color: var(--text); text-align: left; font-weight: 500; }
 </style>
 </head>
 <body>
@@ -161,21 +162,42 @@
       <div id="priceLine">Current price: $63,049, or $0.00063049 per 1 sat. Last checked --:--:-- <a id="refresh">Refresh</a></div>
     </div>
 
-    <div class="toggle" id="toggle">
-      <button data-cur="USD" class="active">USD</button>
-      <button data-cur="EUR">EUR</button>
-      <button data-cur="GBP">GBP</button>
-    </div>
+    <select id="currency" class="currency-select" aria-label="Display currency"></select>
   </div>
 
 <script>
 const SATS_PER_BTC = 100_000_000;
-const symbols = { USD: '$', EUR: '€', GBP: '£' };
 const ATH_USD = 126080;          // all-time high, in USD
 const ATH_DATE = '2025-10-07';   // date of the all-time high
 const ATH_LABEL = 'Oct 7, 2025'; // display label for that date
-// usdRate = how much of the selected currency 1 USD buys (1 for USD)
-const state = { currency: 'USD', price: 63049, usdRate: 1 }; // fiat price per 1 BTC
+
+// Common world currencies (code + name). All exist in Coinbase's USD rate table.
+const CURRENCIES = [
+  ['USD','US Dollar'], ['EUR','Euro'], ['GBP','British Pound'], ['JPY','Japanese Yen'],
+  ['CNY','Chinese Yuan'], ['CHF','Swiss Franc'], ['CAD','Canadian Dollar'], ['AUD','Australian Dollar'],
+  ['NZD','New Zealand Dollar'], ['HKD','Hong Kong Dollar'], ['SGD','Singapore Dollar'], ['INR','Indian Rupee'],
+  ['KRW','South Korean Won'], ['BRL','Brazilian Real'], ['MXN','Mexican Peso'], ['ZAR','South African Rand'],
+  ['SEK','Swedish Krona'], ['NOK','Norwegian Krone'], ['DKK','Danish Krone'], ['PLN','Polish Zloty'],
+  ['TRY','Turkish Lira'], ['AED','UAE Dirham'], ['SAR','Saudi Riyal'], ['ILS','Israeli Shekel'],
+  ['THB','Thai Baht'], ['IDR','Indonesian Rupiah'], ['MYR','Malaysian Ringgit'], ['PHP','Philippine Peso'],
+  ['VND','Vietnamese Dong'], ['TWD','Taiwan Dollar'], ['CZK','Czech Koruna'], ['HUF','Hungarian Forint'],
+  ['RON','Romanian Leu'], ['CLP','Chilean Peso'], ['COP','Colombian Peso'], ['ARS','Argentine Peso'],
+  ['NGN','Nigerian Naira'], ['UAH','Ukrainian Hryvnia']
+];
+
+// state.price = BTC price in the selected currency; usdRate = USD -> selected currency
+const state = { currency: 'USD', price: 63049, usdRate: 1 };
+let btcUsd = 63049;      // live BTC price in USD
+let rates = { USD: 1 };  // USD -> currency rate table (from Coinbase)
+
+// Currency symbol via Intl (shortest form), falling back to the ISO code
+function currencySymbol(code) {
+  try {
+    const parts = new Intl.NumberFormat('en', { style: 'currency', currency: code, currencyDisplay: 'narrowSymbol' }).formatToParts(1);
+    const p = parts.find(x => x.type === 'currency');
+    return p ? p.value : code;
+  } catch (e) { return code; }
+}
 
 // Whole days between the ATH date and today, computed live
 function daysSince(iso) {
@@ -203,62 +225,53 @@ function render(fromSats, skip) {
 }
 
 function updateInfo() {
-  const sym = symbols[state.currency];
+  const sym = currencySymbol(state.currency);
   const perSat = state.price / SATS_PER_BTC;
   const t = new Date().toLocaleTimeString('en-US');
   const athVal = ATH_USD * state.usdRate;
   el('athLine').innerHTML = `All-time high: ${sym}${fmt(athVal, 0)} on ${ATH_LABEL} &nbsp;•&nbsp; Days since: ${daysSince(ATH_DATE)}`;
   el('priceLine').innerHTML = `Current price: ${sym}${fmt(state.price, 0)}, or ${sym}${perSat.toFixed(8)} per 1 sat. Last checked ${t} <a id="refresh">Refresh</a>`;
-  el('refresh').addEventListener('click', fetchPrice);
-  // Tab title always shows the live USD price (derived from the FX rate when
-  // the on-page currency is EUR/GBP so it stays USD).
-  const usdPrice = state.currency === 'USD' ? state.price : state.price / (state.usdRate || 1);
-  document.title = `$${fmt(usdPrice, 0)} · Sats to USD`;
+  el('refresh').addEventListener('click', fetchData);
+  // Tab title always shows the live USD price, regardless of selected currency
+  document.title = `$${fmt(btcUsd, 0)} · Sats to USD`;
 }
 
 fiatEl.addEventListener('input', () => render(parse(fiatEl.value) / state.price * SATS_PER_BTC, 'fiat'));
 btcEl.addEventListener('input',  () => render(parse(btcEl.value) * SATS_PER_BTC, 'btc'));
 satsEl.addEventListener('input', () => render(parse(satsEl.value), 'sats'));
 
-// Currency toggle
-el('toggle').addEventListener('click', e => {
-  const btn = e.target.closest('button');
-  if (!btn) return;
-  [...el('toggle').children].forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  state.currency = btn.dataset.cur;
+// Apply the selected currency using the cached BTC price + rate table (no network)
+function applyCurrency() {
+  state.usdRate = parseFloat(rates[state.currency]) || 1;
+  state.price = btcUsd * state.usdRate;
+  const sym = currencySymbol(state.currency);
   el('curLabel').textContent = state.currency;
   el('fiatCode').textContent = state.currency;
-  el('fiatCoin').textContent = symbols[state.currency];
-  fetchRate().then(fetchPrice);
-});
-
-// Live price from the Coinbase public spot API (no API key required).
-// Endpoint: https://api.coinbase.com/v2/prices/BTC-<CUR>/spot
-async function fetchPrice() {
-  try {
-    const r = await fetch(`https://api.coinbase.com/v2/prices/BTC-${state.currency}/spot`);
-    const j = await r.json();
-    const p = parseFloat(j?.data?.amount);
-    if (p) state.price = p;
-  } catch (err) {
-    console.warn('Price fetch failed, using last known price', err);
-  }
+  const coin = el('fiatCoin');
+  coin.textContent = sym;
+  coin.style.fontSize = sym.length > 1 ? '11px' : '16px';
   render(parse(satsEl.value), null);
 }
 
-// Fiat FX (USD -> selected currency) used to convert the all-time high value.
-// Endpoint: https://api.coinbase.com/v2/exchange-rates?currency=USD
-async function fetchRate() {
-  if (state.currency === 'USD') { state.usdRate = 1; return; }
+// Live data from Coinbase (no API key required): BTC price in USD plus the full
+// USD exchange-rate table. Any currency is derived by cross-rate from these two.
+//   https://api.coinbase.com/v2/prices/BTC-USD/spot
+//   https://api.coinbase.com/v2/exchange-rates?currency=USD
+async function fetchData() {
   try {
-    const r = await fetch('https://api.coinbase.com/v2/exchange-rates?currency=USD');
-    const j = await r.json();
-    const rate = parseFloat(j?.data?.rates?.[state.currency]);
-    if (rate) state.usdRate = rate;
+    const [spotR, ratesR] = await Promise.all([
+      fetch('https://api.coinbase.com/v2/prices/BTC-USD/spot'),
+      fetch('https://api.coinbase.com/v2/exchange-rates?currency=USD')
+    ]);
+    const spot = await spotR.json();
+    const rj = await ratesR.json();
+    const p = parseFloat(spot?.data?.amount);
+    if (p) btcUsd = p;
+    if (rj?.data?.rates) rates = rj.data.rates;
   } catch (err) {
-    console.warn('FX rate fetch failed, ATH shown at last known rate', err);
+    console.warn('Data fetch failed, using last known values', err);
   }
+  applyCurrency();
 }
 
 // Painted sats logo as the tab favicon (same brush-filtered mark as the header)
@@ -282,14 +295,28 @@ function setFavicon() {
   link.href = 'data:image/svg+xml,' + encodeURIComponent(svg);
 }
 
+// Build the currency dropdown
+const sel = el('currency');
+CURRENCIES.forEach(([code, name]) => {
+  const o = document.createElement('option');
+  o.value = code;
+  o.textContent = `${code} — ${name}`;
+  if (code === state.currency) o.selected = true;
+  sel.appendChild(o);
+});
+sel.addEventListener('change', () => {
+  state.currency = sel.value;
+  applyCurrency(); // instant, from cached data; next refresh keeps it live
+});
+
 // Initialize
 setFavicon();
-render(SATS_PER_BTC, null);
-fetchRate().then(fetchPrice);
+applyCurrency();
+fetchData();
 
-// Auto-refresh the live price every 5 seconds
+// Auto-refresh live data every 5 seconds
 const REFRESH_MS = 5_000;
-setInterval(fetchPrice, REFRESH_MS);
+setInterval(fetchData, REFRESH_MS);
 </script>
 </body>
 </html>
