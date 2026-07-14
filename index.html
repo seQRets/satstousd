@@ -133,7 +133,7 @@
         </g>
       </svg>
     </div>
-    <h1>Sats to USD Converter</h1>
+    <h1>Sats to <span id="headingCur">USD</span> Converter</h1>
     <p class="subtitle">Calculate satoshis to <span id="curLabel">USD</span> &amp; BTC</p>
 
     <div class="field">
@@ -245,6 +245,7 @@ function applyCurrency() {
   state.usdRate = parseFloat(rates[state.currency]) || 1;
   state.price = btcUsd * state.usdRate;
   const sym = currencySymbol(state.currency);
+  el('headingCur').textContent = state.currency;
   el('curLabel').textContent = state.currency;
   el('fiatCode').textContent = state.currency;
   const coin = el('fiatCoin');
@@ -295,6 +296,12 @@ function setFavicon() {
   link.href = 'data:image/svg+xml,' + encodeURIComponent(svg);
 }
 
+// Restore the visitor's last-chosen currency, if valid
+try {
+  const saved = localStorage.getItem('currency');
+  if (saved && CURRENCIES.some(([code]) => code === saved)) state.currency = saved;
+} catch (e) { /* localStorage unavailable (e.g. private mode) */ }
+
 // Build the currency dropdown
 const sel = el('currency');
 CURRENCIES.forEach(([code, name]) => {
@@ -306,6 +313,7 @@ CURRENCIES.forEach(([code, name]) => {
 });
 sel.addEventListener('change', () => {
   state.currency = sel.value;
+  try { localStorage.setItem('currency', state.currency); } catch (e) { /* ignore */ }
   applyCurrency(); // instant, from cached data; next refresh keeps it live
 });
 
