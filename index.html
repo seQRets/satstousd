@@ -124,6 +124,23 @@
   }
   .currency-select:hover { background-color: #262626; }
   .currency-select option { background: #1c1c1c; color: var(--text); text-align: left; font-weight: 500; }
+
+  .footer {
+    margin-top: 44px;
+    padding-top: 26px;
+    border-top: 1px solid var(--field-border);
+    font-size: 14px;
+    line-height: 1.8;
+  }
+  .footer a { text-decoration: none; transition: color .15s; }
+  .footer .promo { color: var(--text-dim); }
+  .footer .promo a { color: var(--text-dim); }
+  .footer .promo a:hover { color: var(--text); }
+  .footer .promo a strong { color: var(--accent); font-weight: 700; }
+  .footer .promo a:hover strong { color: #ffb14d; }
+  .footer .tip { margin-top: 10px; }
+  .footer .tip a { color: var(--accent); font-weight: 600; }
+  .footer .tip a:hover { color: #ffb14d; }
 </style>
 </head>
 <body>
@@ -179,6 +196,17 @@
     </div>
 
     <select id="currency" class="currency-select" aria-label="Display currency"></select>
+
+    <footer class="footer">
+      <div class="promo">
+        <a href="https://seqrets.app" target="_blank" rel="noopener">
+          Protect your Bitcoin for generations — <strong>seed storage &amp; inheritance by seQRets</strong> →
+        </a>
+      </div>
+      <div class="tip">
+        <a href="https://coinos.io/seQRets/receive" target="_blank" rel="noopener">⚡ Enjoying this? Tip a few sats</a>
+      </div>
+    </footer>
   </div>
 
 <script>
