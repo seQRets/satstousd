@@ -150,7 +150,7 @@
       </svg>
     </div>
     <h1>Sats to <span id="headingCur">USD</span> Converter</h1>
-    <p class="subtitle">Calculate satoshis to <span id="curLabel">USD</span> &amp; BTC</p>
+    <p class="subtitle">Live Satoshi &amp; Bitcoin Prices In 38 World Currencies</p>
 
     <div class="field">
       <input id="fiat" type="text" inputmode="decimal" value="63,049">
@@ -262,7 +262,6 @@ function applyCurrency() {
   state.price = btcUsd * state.usdRate;
   const sym = currencySymbol(state.currency);
   el('headingCur').textContent = state.currency;
-  el('curLabel').textContent = state.currency;
   el('fiatCode').textContent = state.currency;
   const coin = el('fiatCoin');
   coin.textContent = sym;
