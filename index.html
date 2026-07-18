@@ -105,25 +105,20 @@
   .info { color: var(--text-dim); font-size: 14px; line-height: 1.9; margin-top: 22px; }
   .info a { color: var(--text); text-decoration: underline; cursor: pointer; }
 
-  .currency-select {
-    margin-top: 26px;
+  .currency-inline {
     appearance: none;
     -webkit-appearance: none;
-    background: #1c1c1c url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%238a8a8a' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>") no-repeat right 16px center;
-    color: var(--text);
-    border: 1px solid var(--field-border);
-    border-radius: 999px;
-    padding: 11px 42px 11px 22px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
+    background: transparent url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%238a8a8a' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>") no-repeat right center;
+    border: none;
     outline: none;
-    text-align: center;
-    text-align-last: center;
-    transition: background-color .15s;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 18px;
+    font-weight: 600;
+    padding: 0 20px 0 0;
+    cursor: pointer;
   }
-  .currency-select:hover { background-color: #262626; }
-  .currency-select option { background: #1c1c1c; color: var(--text); text-align: left; font-weight: 500; }
+  .currency-inline option { background: #1c1c1c; color: var(--text); font-weight: 500; }
 
   .footer {
     margin-top: 44px;
@@ -141,6 +136,12 @@
   .footer .tip { margin-top: 10px; }
   .footer .tip a { color: var(--accent); font-weight: 600; }
   .footer .tip a:hover { color: #ffb14d; }
+
+  /* Narrow screens: shrink amounts so large-value currencies don't crowd the badge */
+  @media (max-width: 430px) {
+    .field input { font-size: 26px; }
+    .field { padding: 20px; }
+  }
 </style>
 </head>
 <body>
@@ -171,7 +172,10 @@
 
     <div class="field">
       <input id="fiat" type="text" inputmode="decimal" value="63,049">
-      <span class="badge"><span class="coin usd" id="fiatCoin">$</span><span id="fiatCode">USD</span></span>
+      <span class="badge">
+        <span class="coin usd" id="fiatCoin">$</span>
+        <select id="currency" class="currency-inline" aria-label="Display currency"></select>
+      </span>
     </div>
 
     <div class="field">
@@ -195,8 +199,6 @@
       <div id="priceLine">Current price: $63,049, or $0.00063049 per 1 sat. Last checked --:--:-- <a id="refresh">Refresh</a></div>
       <div id="blockLine"></div>
     </div>
-
-    <select id="currency" class="currency-select" aria-label="Display currency"></select>
 
     <footer class="footer">
       <div class="promo">
@@ -291,7 +293,6 @@ function applyCurrency() {
   state.price = btcUsd * state.usdRate;
   const sym = currencySymbol(state.currency);
   el('headingCur').textContent = state.currency;
-  el('fiatCode').textContent = state.currency;
   const coin = el('fiatCoin');
   coin.textContent = sym;
   coin.style.fontSize = sym.length > 1 ? '11px' : '16px';
@@ -351,7 +352,8 @@ const sel = el('currency');
 CURRENCIES.forEach(([code, name]) => {
   const o = document.createElement('option');
   o.value = code;
-  o.textContent = `${code} — ${name}`;
+  o.textContent = code;
+  o.title = name;
   if (code === state.currency) o.selected = true;
   sel.appendChild(o);
 });
