@@ -193,6 +193,7 @@
     <div class="info">
       <div id="athLine">All-time high: $126,080 on Oct 7, 2025 &nbsp;•&nbsp; Days since: 280</div>
       <div id="priceLine">Current price: $63,049, or $0.00063049 per 1 sat. Last checked --:--:-- <a id="refresh">Refresh</a></div>
+      <div id="blockLine"></div>
     </div>
 
     <select id="currency" class="currency-select" aria-label="Display currency"></select>
@@ -360,14 +361,35 @@ sel.addEventListener('change', () => {
   applyCurrency(); // instant, from cached data; next refresh keeps it live
 });
 
+// Live Bitcoin block height — the "timechain" timestamp. Keyless, CORS-open.
+async function fetchHeight() {
+  const sources = [
+    'https://mempool.space/api/blocks/tip/height',
+    'https://blockstream.info/api/blocks/tip/height'
+  ];
+  for (const url of sources) {
+    try {
+      const r = await fetch(url);
+      const h = parseInt(await r.text(), 10);
+      if (Number.isFinite(h)) {
+        el('blockLine').innerHTML = `⛓ Block <a href="https://mempool.space/block/${h}" target="_blank" rel="noopener">${fmt(h, 0)}</a>`;
+        return;
+      }
+    } catch (e) { /* try the next source */ }
+  }
+  // both failed: leave the last known height in place
+}
+
 // Initialize
 setFavicon();
 applyCurrency();
 fetchData();
+fetchHeight();
 
-// Auto-refresh live data every 5 seconds
+// Auto-refresh: price every 5s, block height every 60s
 const REFRESH_MS = 5_000;
 setInterval(fetchData, REFRESH_MS);
+setInterval(fetchHeight, 60_000);
 </script>
 </body>
 </html>
