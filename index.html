@@ -259,13 +259,21 @@ function fmt(n, maxDec) {
   if (!isFinite(n)) return '0';
   return n.toLocaleString('en-US', { maximumFractionDigits: maxDec });
 }
+// Fiat amounts: 2 decimals for values >= 1, but up to 8 for sub-unit amounts
+// so a handful of sats doesn't round away to 0.00.
+function fmtFiat(n) {
+  if (!isFinite(n)) return '0';
+  const abs = Math.abs(n);
+  const maxDec = (abs >= 1 || abs === 0) ? 2 : 8;
+  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: maxDec });
+}
 const parse = s => parseFloat(String(s).replace(/,/g, '')) || 0;
 
 // Recalculate all fields from a satoshi amount, skipping the field being typed in
 function render(fromSats, skip) {
   const btc = fromSats / SATS_PER_BTC;
   const fiat = btc * state.price;
-  if (skip !== 'fiat') fiatEl.value = fmt(fiat, 2);
+  if (skip !== 'fiat') fiatEl.value = fmtFiat(fiat);
   if (skip !== 'btc')  btcEl.value  = fmt(btc, 8);
   if (skip !== 'sats') satsEl.value = fmt(fromSats, 0);
   updateInfo();
